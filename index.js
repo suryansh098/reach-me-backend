@@ -5,7 +5,7 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
-const { postsRouter } = require('./routers/postsRouter.js');
+const { router: postsRouter } = require('./routes/posts.js');
 
 const app = express();
 
