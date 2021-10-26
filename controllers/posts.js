@@ -1,7 +1,7 @@
-const mongoose = require('mongoose');
-const { PostMessage } = require('../models/postMessage.js');
+import mongoose from 'mongoose';
+import PostMessage from '../models/postMessage.js';
 
-const getPosts = async (req, res) => {
+export const getPosts = async (req, res) => {
   try {
     const postMessages = await PostMessage.find();
     
@@ -11,10 +11,10 @@ const getPosts = async (req, res) => {
   }
 }
 
-const createPost = async (req, res) => {
+export const createPost = async (req, res) => {
   const post = req.body;
 
-  const newPost = new PostMessage(post);
+  const newPost = new PostMessage({ ...post, creator: req.userId, createdAt: new Date().toISOString() });
 
   try {
     await newPost.save();
@@ -25,7 +25,7 @@ const createPost = async (req, res) => {
   }
 }
 
-const updatePost = async (req, res) => {
+export const updatePost = async (req, res) => {
   const { id: _id } = req.params;
   const post = req.body;
 
@@ -38,7 +38,7 @@ const updatePost = async (req, res) => {
   res.json(updatedPost);
 }
 
-const deletePost = async (req, res) => {
+export const deletePost = async (req, res) => {
   const { id } = req.params;
 
   if(!mongoose.Types.ObjectId.isValid(id)) {
@@ -50,23 +50,29 @@ const deletePost = async (req, res) => {
   res.json({ message: 'Post Deleted Successfully'});
 }
 
-const likePost = async (req, res) => {
+export const likePost = async (req, res) => {
   const { id } = req.params;
+
+  if(!req.userId) return res.json({ message: 'Authentication Failed!'});
 
   if(!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(404).send('Invalid Post Id');
   }
 
   const post = await PostMessage.findById(id);
-  const updatedPost = await PostMessage.findByIdAndUpdate(id, { likeCount: post.likeCount + 1}, { new: true });
+
+  const index = post.likes.findIndex((id) => id === String(req.userId));
+
+  if(index === -1) {
+    // like the post
+    post.likes.push(req.userId);
+  } else {
+    // dislike the post
+    post.likes = post.likes.filter(id => id !== String(req.userId));
+  }
+
+  const updatedPost = await PostMessage.findByIdAndUpdate(id, post, { new: true });
 
   res.json(updatedPost);
 
-}
-module.exports = {
-  getPosts,
-  createPost,
-  updatePost,
-  deletePost,
-  likePost
 }
